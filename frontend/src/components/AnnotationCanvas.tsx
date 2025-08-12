@@ -47,6 +47,13 @@ const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
   const [resizeHandle, setResizeHandle] = useState<'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'e' | 'w' | null>(null);
   const [editStartPos, setEditStartPos] = useState({ x: 0, y: 0 });
   const [originalBox, setOriginalBox] = useState<BoundingBox | null>(null);
+  
+  // Context menu states
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    annotation: Annotation;
+  } | null>(null);
 
   // Convert screen coordinates to image coordinates
   const screenToImage = useCallback((screenX: number, screenY: number) => {
@@ -144,6 +151,40 @@ const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
     return imageX >= bbox.x && imageX <= bbox.x + bbox.width &&
            imageY >= bbox.y && imageY <= bbox.y + bbox.height;
   }, [yoloToImage]);
+
+  // Handle class change from context menu
+  const handleClassChange = async (annotation: Annotation, newClassId: number) => {
+    if (newClassId === annotation.class_id) {
+      setContextMenu(null);
+      return;
+    }
+
+    try {
+      const updatedAnnotation = await annotationApi.updateAnnotation(annotation.id, {
+        class_id: newClassId,
+        x_center: annotation.x_center,
+        y_center: annotation.y_center,
+        width: annotation.width,
+        height: annotation.height
+      });
+
+      // Update the annotations in the list
+      const updatedAnnotations = annotations.map(a => 
+        a.id === annotation.id ? updatedAnnotation : a
+      );
+      onAnnotationsChange(updatedAnnotations);
+      
+      // If this was the selected annotation, update it too
+      if (selectedAnnotation?.id === annotation.id) {
+        onAnnotationSelect(updatedAnnotation);
+      }
+      
+      setContextMenu(null);
+    } catch (error) {
+      console.error('Failed to update annotation class:', error);
+      alert('Failed to update annotation class');
+    }
+  };
 
   // Fit image to canvas
   const fitToCanvas = useCallback(() => {
@@ -289,8 +330,41 @@ const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
     getResizeHandles
   ]);
 
+  // Handle right-click context menu
+  const handleContextMenu = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const imageCoords = screenToImage(e.clientX, e.clientY);
+    
+    // Check if right-clicking on any annotation
+    let clickedAnnotation: Annotation | null = null;
+    for (const annotation of annotations) {
+      if (isPointInAnnotation(imageCoords.x, imageCoords.y, annotation)) {
+        clickedAnnotation = annotation;
+        break;
+      }
+    }
+    
+    if (clickedAnnotation) {
+      // Show context menu at mouse position
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        setContextMenu({
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+          annotation: clickedAnnotation
+        });
+      }
+    } else {
+      setContextMenu(null);
+    }
+  };
+
   // Handle mouse down
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Close context menu on any click
+    setContextMenu(null);
+    
     const imageCoords = screenToImage(e.clientX, e.clientY);
     
     // First check if we're clicking on a resize handle of the selected annotation
@@ -553,6 +627,18 @@ const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, [imageLoaded, fitToCanvas]);
 
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setContextMenu(null);
+    };
+    
+    if (contextMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [contextMenu]);
+
   return (
     <div 
       ref={containerRef}
@@ -603,6 +689,7 @@ const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
+        onContextMenu={handleContextMenu}
         style={{
           display: 'block',
           border: '1px solid #ddd',
@@ -610,6 +697,74 @@ const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
           opacity: imageLoaded ? 1 : 0.3
         }}
       />
+      
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          style={{
+            position: 'absolute',
+            left: contextMenu.x,
+            top: contextMenu.y,
+            backgroundColor: 'white',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            padding: '4px 0',
+            zIndex: 1000,
+            minWidth: '120px'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ 
+            padding: '4px 12px', 
+            fontSize: '12px', 
+            fontWeight: 'bold', 
+            color: '#666',
+            borderBottom: '1px solid #eee',
+            marginBottom: '4px'
+          }}>
+            Change Class
+          </div>
+          {classDefinitions.map((classDef) => (
+            <div
+              key={classDef.id}
+              style={{
+                padding: '6px 12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '13px',
+                backgroundColor: contextMenu.annotation.class_id === classDef.id ? '#f0f0f0' : 'transparent'
+              }}
+              onClick={() => handleClassChange(contextMenu.annotation, classDef.id)}
+              onMouseEnter={(e) => {
+                if (contextMenu.annotation.class_id !== classDef.id) {
+                  e.currentTarget.style.backgroundColor = '#f8f9fa';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (contextMenu.annotation.class_id !== classDef.id) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+            >
+              <div
+                style={{
+                  width: '12px',
+                  height: '12px',
+                  backgroundColor: classDef.color,
+                  borderRadius: '2px'
+                }}
+              />
+              <span>{classDef.name}</span>
+              {contextMenu.annotation.class_id === classDef.id && (
+                <span style={{ marginLeft: 'auto', color: '#1976d2' }}>✓</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
       
       {/* Zoom controls */}
       <div style={{

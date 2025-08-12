@@ -311,6 +311,7 @@ const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
         <div>• Select a class above</div>
         <div>• Click and drag to draw boxes</div>
         <div>• Click boxes to select/edit</div>
+        <div>• Right-click boxes to change class</div>
         <div>• Use mouse wheel to zoom</div>
       </div>
     </div>

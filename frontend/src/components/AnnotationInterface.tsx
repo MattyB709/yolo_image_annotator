@@ -70,13 +70,13 @@ const AnnotationInterface: React.FC<AnnotationInterfaceProps> = ({
             onClose();
           }
           break;
-        case 'ArrowRight':
+        case 'f':
           if (hasNext && onNext) {
             e.preventDefault();
             onNext();
           }
           break;
-        case 'ArrowLeft':
+        case 'd':
           if (hasPrevious && onPrevious) {
             e.preventDefault();
             onPrevious();
@@ -302,7 +302,7 @@ const AnnotationInterface: React.FC<AnnotationInterfaceProps> = ({
         justifyContent: 'space-between'
       }}>
         <div>
-          <strong>Shortcuts:</strong> ESC (close/deselect) • ←/→ (navigate) • 1-9 (select class) • Del (delete selected)
+          <strong>Shortcuts:</strong> ESC (close/deselect) • ←/→ (navigate) • 1-9 (select class) • Del (delete selected) • Right-click (change class)
         </div>
         <div>
           {annotations.length} annotation{annotations.length !== 1 ? 's' : ''}
