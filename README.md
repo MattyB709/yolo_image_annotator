@@ -1,6 +1,6 @@
 # YOLO Image Annotation Tool
 
-A web-based image annotation tool for object detection tasks, specifically designed for YOLO dataset format.
+web based yolo image annotator. Vibe coded this with claude code. Works pretty well
 
 ## Features
 
