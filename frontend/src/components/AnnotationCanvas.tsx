@@ -387,11 +387,12 @@ const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
           })
         };
         
-        // Update annotations array
+        // Update annotations array and selected annotation
         const updatedAnnotations = annotations.map(a => 
           a.id === selectedAnnotation.id ? newAnnotation : a
         );
         onAnnotationsChange(updatedAnnotations);
+        onAnnotationSelect(newAnnotation);
         
       } else if (editMode === 'resize' && resizeHandle) {
         // Resize the annotation
@@ -443,11 +444,12 @@ const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
           ...imageToYolo(newBox)
         };
         
-        // Update annotations array
+        // Update annotations array and selected annotation
         const updatedAnnotations = annotations.map(a => 
           a.id === selectedAnnotation.id ? newAnnotation : a
         );
         onAnnotationsChange(updatedAnnotations);
+        onAnnotationSelect(newAnnotation);
       }
     } else {
       // Update cursor based on hover state
