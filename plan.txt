@@ -1,0 +1,142 @@
+YOLO Image Annotation Tool - Development Plan
+
+OVERVIEW:
+A web-based image annotation tool for object detection tasks, specifically designed for YOLO dataset format.
+The tool will allow creating projects, uploading images, drawing bounding boxes, assigning classes, and 
+importing/exporting YOLO format datasets.
+
+CORE FEATURES:
+
+1. PROJECT MANAGEMENT
+   - Create new projects with custom names
+   - List all existing projects
+   - Delete projects
+   - Each project stores its own images, annotations, and class definitions
+
+2. CLASS MANAGEMENT
+   - Define custom classes for each project
+   - Add/remove/edit class names
+   - Assign colors to classes for visual distinction
+   - Classes stored in project configuration
+
+3. IMAGE MANAGEMENT
+   - Upload images (JPG, JPEG, PNG) to projects
+   - Display thumbnails in project view
+   - Delete individual images
+   - Support batch upload of multiple images
+
+4. ANNOTATION INTERFACE
+   - Canvas-based image viewer with zoom/pan capabilities
+   - Click and drag to draw bounding boxes
+   - Right panel showing list of all annotations (similar to CVAT UI)
+   - Each annotation shows: class name, coordinates, confidence
+   - Edit/delete individual annotations
+   - Keyboard shortcuts for common actions
+
+5. YOLO FORMAT IMPORT/EXPORT
+   - Import existing YOLO datasets (images + labels folder structure)
+   - Parse .txt label files with class_id x_center y_center width height format
+   - Export projects in YOLO format with proper folder structure:
+     * images/train/
+     * labels/train/
+   - Maintain filename correspondence between images and labels
+
+6. DATA PERSISTENCE
+   - SQLite database for project metadata, classes, and annotations
+   - File system storage for images
+   - Structured project directories
+
+TECHNICAL STACK:
+
+Frontend:
+- React.js for UI components
+- Canvas API or Fabric.js for drawing annotations
+- React Router for navigation
+- Axios for API calls
+
+Backend:
+- Node.js with Express.js
+- SQLite database with better-sqlite3
+- Multer for file uploads
+- Sharp for image processing/thumbnails
+
+File Structure:
+```
+img_annotate/
+├── frontend/          # React app
+├── backend/           # Express API
+├── database/          # SQLite files
+├── uploads/           # Project images and exports
+└── README.md
+```
+
+DEVELOPMENT PHASES:
+
+Phase 1: Basic Setup
+- Project structure and dependencies
+- Basic React frontend with routing
+- Express backend with API endpoints
+- SQLite database schema
+
+Phase 2: Project & Class Management
+- Create/list/delete projects
+- Add/edit/delete classes per project
+- Basic project dashboard
+
+Phase 3: Image Upload & Display
+- File upload functionality
+- Image thumbnails and gallery view
+- Image viewer component
+
+Phase 4: Annotation Interface
+- Canvas-based annotation drawing
+- Bounding box creation and editing
+- Right panel with annotation list
+- Class assignment for annotations
+
+Phase 5: YOLO Import/Export
+- Parse existing YOLO dataset imports
+- Export projects in YOLO format
+- File validation and error handling
+
+Phase 6: Polish & Enhancement
+- Keyboard shortcuts
+- Undo/redo functionality
+- Batch operations
+- Performance optimizations
+
+DATABASE SCHEMA:
+
+Projects:
+- id, name, created_at, class_definitions (JSON)
+
+Images:
+- id, project_id, filename, original_name, width, height, uploaded_at
+
+Annotations:
+- id, image_id, class_id, x_center, y_center, width, height, created_at
+
+API ENDPOINTS:
+
+Projects:
+- GET /api/projects
+- POST /api/projects
+- DELETE /api/projects/:id
+
+Images:
+- GET /api/projects/:id/images
+- POST /api/projects/:id/images/upload
+- DELETE /api/images/:id
+
+Annotations:
+- GET /api/images/:id/annotations
+- POST /api/images/:id/annotations
+- PUT /api/annotations/:id
+- DELETE /api/annotations/:id
+
+Import/Export:
+- POST /api/projects/:id/import-yolo
+- GET /api/projects/:id/export-yolo
+
+This plan focuses on the core functionality needed for YOLO dataset annotation and editing,
+with a clean UI similar to CVAT's layout and robust import/export capabilities.
