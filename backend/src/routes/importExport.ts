@@ -215,6 +215,7 @@ router.get('/projects/:id/export-yolo', async (req, res) => {
 
     const classDefinitions = JSON.parse(project.class_definitions);
     let exportedCount = 0;
+    const trainPaths = new Set<string>();
     
     for (let i = 0; i < images.length; i++) {
       const image = images[i] as Image;
@@ -227,16 +228,14 @@ router.get('/projects/:id/export-yolo', async (req, res) => {
         continue;
       }
 
-      // Use sequential numbering for exported files
-      const targetImageName = `${exportedCount + 1}.jpg`;
+      // Use original filename for exported files
+      const targetImageName = image.original_name;
       const targetImagePath = join(imagesDir, targetImageName);
-      const targetLabelPath = join(labelsDir, `${exportedCount + 1}.txt`);
+      const targetLabelPath = join(labelsDir, targetImageName.replace(/\.(jpg|jpeg|png)$/i, '.txt'));
 
       try {
-        // Convert image to JPG format for consistency
-        await sharp(sourceImagePath)
-          .jpeg({ quality: 95 })
-          .toFile(targetImagePath);
+        // Copy image preserving original format and filename
+        copyFileSync(sourceImagePath, targetImagePath);
 
         // Create label file content
         const labelContent = annotations.map((annotation: Annotation) => {
@@ -250,7 +249,16 @@ router.get('/projects/:id/export-yolo', async (req, res) => {
         }).join('\n');
         
         writeFileSync(targetLabelPath, labelContent);
-        exportedCount++;
+        
+        // Only add to train paths after successful export (and count unique exports)
+        const pathToAdd = `images/train/${targetImageName}`;
+        const wasNewPath = !trainPaths.has(pathToAdd);
+        trainPaths.add(pathToAdd);
+        
+        // Only increment counter for truly new files
+        if (wasNewPath) {
+          exportedCount++;
+        }
         
       } catch (error) {
         console.error(`Error processing image ${image.filename}:`, error);
@@ -260,6 +268,10 @@ router.get('/projects/:id/export-yolo', async (req, res) => {
     if (exportedCount === 0) {
       return res.status(400).json({ error: 'No images could be exported' });
     }
+
+    // Create train.txt file with image paths
+    const trainContent = Array.from(trainPaths).join('\n');
+    writeFileSync(join(exportDir, 'train.txt'), trainContent);
 
     // Create classes.txt file
     const classesContent = classDefinitions.map((cls: ClassDefinition) => cls.name).join('\n');
